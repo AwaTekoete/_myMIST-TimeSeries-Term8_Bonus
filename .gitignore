@@ -10,7 +10,9 @@ __pycache__/
 .venv/
 
 # Daten (lokal behalten)
-data/raw/
+data/raw/*.csv
+!data/raw/holidays.csv
+!data/raw/stores.csv
 data/plots/
 
 # MLflow (zu groß für GitHub)
