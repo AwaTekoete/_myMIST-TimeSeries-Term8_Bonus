@@ -85,13 +85,13 @@ python -m pip install -r requirements.txt
 
 ---
 
-## App starten
+## Live Demo
 
-```bash
-streamlit run app.py
-```
+Die App ist online verfügbar:
 
-Browser öffnet automatisch unter: http://localhost:8501
+**https://mist-timeseries-store44.streamlit.app/**
+
+Keine Installation nötig — direkt im Browser nutzbar.
 
 ---
 
