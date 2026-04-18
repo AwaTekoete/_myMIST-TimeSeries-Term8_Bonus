@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.ipynb_checkpoints/
+
+# Virtual Environment
+.venv/
+
+# Daten (lokal behalten)
+data/raw/
+data/processed/
+data/plots/
+
+# MLflow (zu groß für GitHub)
+mlruns/
+mlartifacts/
+mlflow.db
+
+# Modell (zu groß für GitHub)
+models/
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# PyCharm
+.idea/
+
+# Streamlit
+.streamlit/secrets.toml
+.env
