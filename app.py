@@ -413,6 +413,16 @@ def main():
                     mime="text/csv"
                 )
 
+                # MIDI Download (nur für N-Tage Modus)
+                if n_tage >= 7:
+                    midi_bytes = generate_midi(forecast)
+                    st.download_button(
+                        label="🎵 Prognose als MIDI herunterladen",
+                        data=midi_bytes,
+                        file_name=f"prognose_{n_tage}tage_ab_{startdatum}.mid",
+                        mime="audio/midi"
+                    )
+
     else:
         # Willkommens-Ansicht
         st.info("Prognose-Einstellungen in der Sidebar auswaehlen und 'Prognose erstellen' klicken.")
@@ -424,6 +434,56 @@ def main():
                     f"{df_feat.index.min().strftime('%d.%m.%Y')} — {df_feat.index.max().strftime('%d.%m.%Y')}")
         col3.metric("Champion Model", "Random Forest (HyperOpt)")
 
+
+# ============================================================
+# MIDI SONIFICATION FUNKTION
+# ============================================================
+def generate_midi(forecast: pd.DataFrame) -> bytes:
+    """
+    Generiert MIDI Datei aus Prognose-DataFrame.
+    Rückgabe: MIDI als bytes für Streamlit Download.
+    """
+    from midiutil import MIDIFile
+
+    WOCHENTAG_NOTEN = {
+        0: 57, 1: 60, 2: 64, 3: 67,
+        4: 69, 5: 72, 6: 76,
+    }
+
+    TEMPO   = 120
+    TRACK   = 0
+    CHANNEL = 0
+
+    midi = MIDIFile(1)
+    midi.addTempo(TRACK, 0, TEMPO)
+
+    min_v = forecast['prediction'].min()
+    max_v = forecast['prediction'].max()
+    beat  = 0.0
+
+    for datum, row in forecast.iterrows():
+        verkauf   = float(row['prediction'])
+        wochentag = datum.dayofweek
+        note      = WOCHENTAG_NOTEN[wochentag]
+        velocity  = max(40, min(120, int(
+            40 + (verkauf - min_v) / (max_v - min_v) * 80
+        )))
+        dauer = 1.0 if wochentag >= 5 else 0.75
+
+        if verkauf > forecast['prediction'].quantile(0.95):
+            note += 12
+        if verkauf == 0:
+            beat += dauer
+            continue
+
+        midi.addNote(TRACK, CHANNEL, note, beat, dauer, velocity)
+        beat += dauer
+
+    # Als bytes zurückgeben
+    import io
+    buffer = io.BytesIO()
+    midi.writeFile(buffer)
+    return buffer.getvalue()
 
 if __name__ == "__main__":
     main()
