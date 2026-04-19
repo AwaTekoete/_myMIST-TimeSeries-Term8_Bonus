@@ -441,9 +441,10 @@ def main():
 def generate_midi(forecast: pd.DataFrame) -> bytes:
     """
     Generiert MIDI Datei aus Prognose-DataFrame.
-    Rückgabe: MIDI als bytes für Streamlit Download.
+    Modulation: Oktave + Notendauer nach Verkaufswert.
     """
     from midiutil import MIDIFile
+    import io
 
     WOCHENTAG_NOTEN = {
         0: 57, 1: 60, 2: 64, 3: 67,
@@ -454,33 +455,48 @@ def generate_midi(forecast: pd.DataFrame) -> bytes:
     TRACK   = 0
     CHANNEL = 0
 
-    midi = MIDIFile(1)
-    midi.addTempo(TRACK, 0, TEMPO)
-
+    q25   = forecast['prediction'].quantile(0.25)
+    q75   = forecast['prediction'].quantile(0.75)
+    q95   = forecast['prediction'].quantile(0.95)
     min_v = forecast['prediction'].min()
     max_v = forecast['prediction'].max()
-    beat  = 0.0
+
+    midi = MIDIFile(1)
+    midi.addTempo(TRACK, 0, TEMPO)
+    beat = 0.0
 
     for datum, row in forecast.iterrows():
         verkauf   = float(row['prediction'])
         wochentag = datum.dayofweek
-        note      = WOCHENTAG_NOTEN[wochentag]
-        velocity  = max(40, min(120, int(
+
+        if verkauf == 0:
+            beat += 0.5
+            continue
+
+        note = WOCHENTAG_NOTEN[wochentag]
+
+        if verkauf > q95:
+            note  += 24
+            dauer  = 1.5
+        elif verkauf > q75:
+            note  += 12
+            dauer  = 1.25
+        elif verkauf < q25:
+            note  -= 12
+            dauer  = 0.5
+        else:
+            dauer  = 0.75
+
+        if wochentag >= 5:
+            dauer += 0.25
+
+        velocity = max(40, min(120, int(
             40 + (verkauf - min_v) / (max_v - min_v) * 80
         )))
-        dauer = 1.0 if wochentag >= 5 else 0.75
-
-        if verkauf > forecast['prediction'].quantile(0.95):
-            note += 12
-        if verkauf == 0:
-            beat += dauer
-            continue
 
         midi.addNote(TRACK, CHANNEL, note, beat, dauer, velocity)
         beat += dauer
 
-    # Als bytes zurückgeben
-    import io
     buffer = io.BytesIO()
     midi.writeFile(buffer)
     return buffer.getvalue()
